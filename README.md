@@ -45,22 +45,20 @@ Hyprland already has several related tools, but each solves a different problem:
 
 This fork is for per-window, focus-aware shading.
 
-## Planned Behavior
+## Current Usage
 
-Rough target config shape:
+Build the plugin:
 
-```ini
-plugin {
-    focus_shade {
-        classes = com.mitchellh.ghostty
-        same_workspace_only = true
-        shader = desaturate
-        saturation = 0.35
-    }
-}
+```sh
+make all -j
 ```
 
-The exact syntax may change as the plugin API and existing code shape dictate.
+Load the built plugin into the current Hyprland session:
+
+```sh
+hyprctl plugin load /path/to/hypr-focus-shade/out/hypr-focus-shade.so
+hyprctl reload
+```
 
 Simple Lua config shape:
 
@@ -77,27 +75,46 @@ hl.config({
 })
 ```
 
-For multiple class groups or different shaders per app, register rules:
+For multiple class groups or different shaders per app, register rules after the
+plugin is loaded:
 
 ```lua
-hl.plugin.focus_shade.rule({
-    classes = "com.mitchellh.ghostty",
-    shader = "desaturate saturation=0.35",
-    same_workspace_only = true,
-})
+if hl.plugin.focus_shade ~= nil then
+    hl.plugin.focus_shade.rule({
+        classes = "com.mitchellh.ghostty",
+        shader = "desaturate saturation=0.25",
+        same_workspace_only = true,
+    })
 
-hl.plugin.focus_shade.rule({
-    classes = "firefox,org.mozilla.firefox",
-    shader = "desaturate saturation=0.55",
-    same_workspace_only = true,
-})
+    hl.plugin.focus_shade.rule({
+        classes = "firefox,org.mozilla.firefox,zen",
+        shader = "desaturate saturation=0.55",
+        same_workspace_only = true,
+    })
+end
 ```
 
 If one or more `hl.plugin.focus_shade.rule(...)` calls are present, they take
 priority over the simple `hl.config({ plugin = { focus_shade = ... } })`
 fallback.
 
-## Debugging
+## Commands
+
+For local development, rebuild and reload the plugin with:
+
+```sh
+scripts/dev-reload
+```
+
+or:
+
+```sh
+make dev-reload
+```
+
+The script builds `out/hypr-focus-shade.so`, unloads the previous instance from
+this checkout if present, loads the new build, reloads Hyprland, and prints
+`hyprctl focus-shade status`.
 
 Inspect current focus-shade state with:
 
@@ -130,46 +147,58 @@ Internally, this registers Hyprland plugin config keys such as
 `plugin:focus_shade:classes`, matching Hyprland's `plugin:<namespace>:<key>`
 plugin-value format.
 
-The plugin should recompute shading when:
+## Finding Window Classes
+
+Use `hyprctl clients` to inspect the class names Hyprland sees:
+
+```sh
+hyprctl clients -j | jq -r '.[] | "\(.class)\t\(.title)"'
+```
+
+For one app family, filter by class or title:
+
+```sh
+hyprctl clients -j |
+  jq -r '.[] | select((.class | test("firefox|zen"; "i")) or (.title | test("firefox|zen"; "i"))) | "\(.class)\t\(.title)"'
+```
+
+The `classes` value in `hl.plugin.focus_shade.rule(...)` is comma-separated.
+Keep it literal and boring: `firefox,org.mozilla.firefox,zen`.
+
+## Runtime Behavior
+
+The plugin recomputes shading when:
 
 - active window changes
 - a window opens or closes
 - workspace changes
-- a matching window moves between workspaces, if hookable
-- config reloads, if hookable
+- config reloads
 
-It should also track plugin-owned effects separately, so clearing focus shading
+It tracks plugin-owned effects separately, so clearing focus shading
 does not remove shaders that the user applied explicitly through upstream
 `darkwindow:shade` rules or dispatchers.
+
+## Known Limits
+
+- Only one shader can be applied to a window at a time.
+- Runtime `enable`, `disable`, and `toggle` state is session-only.
+- Config reload resets runtime enabled state to `plugin:focus_shade:enabled`.
+- Rules are class-based. Title/process matching is not part of focus shading yet.
+- The current rule API is Lua-first. Hyprlang compatibility exists mainly for
+  the upstream shader plumbing.
 
 ## Development Notes
 
 Hyprland plugins are loaded into the compositor process. A broken plugin can
 affect the session, so this should be built and tested carefully.
 
-For the current local workflow, rebuild and reload the plugin with:
+Current development path:
 
-```sh
-scripts/dev-reload
-```
-
-or:
-
-```sh
-make dev-reload
-```
-
-The script builds `out/hypr-focus-shade.so`, unloads the previous instance from
-this checkout if present, loads the new build, reloads Hyprland, and prints
-`hyprctl focus-shade status`.
-
-Suggested path:
-
-1. Understand the current `Hypr-DarkWindow` shader/window plumbing.
-2. Add or identify a desaturation shader.
-3. Add a manual dispatcher/config path for applying that shader.
-4. Add focus/workspace/class automation.
-5. Package the renamed surface and add debug/status tooling.
+1. Keep the working Ghostty/browser focus-shade path stable.
+2. Improve status/debug output before adding more behavior.
+3. Keep upstream shader/window-rule compatibility unless there is a concrete
+   reason to remove it.
+4. Test reload behavior after plugin lifecycle changes.
 
 Test in a nested Hyprland session before loading experimental builds into a
 main desktop session.
