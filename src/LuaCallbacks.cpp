@@ -110,3 +110,42 @@ int LuaCallbacks::shade(lua_State* L)
     lua_pushcclosure(L, dispatchedShade, 2);
     return 1;
 }
+
+int LuaCallbacks::focusShadeRule(lua_State* L)
+{
+    if (lua_gettop(L) != 1)
+        return HyprLua::configError(L, "focus_shade.rule: expected 1 argument (table { classes, shader?, same_workspace_only? })");
+    if (!lua_istable(L, 1))
+        return HyprLua::configError(L, "focus_shade.rule: expected a table { classes, shader?, same_workspace_only? }");
+
+    auto classes = HyprLua::tableOptStr(L, 1, "classes").value_or("");
+    if (classes.empty())
+        return HyprLua::configError(L, "focus_shade.rule: classes must be a non-empty comma separated string");
+
+    auto shader = HyprLua::tableOptStr(L, 1, "shader").value_or("desaturate");
+    size_t space = shader.find(" ");
+    if (space != std::string::npos)
+    {
+        auto args = shader.substr(space + 1);
+        try
+        {
+            ShaderDefinition::ParseArgs(args);
+        }
+        catch (const std::exception& ex)
+        {
+            return HyprLua::configError(L, "focus_shade.rule: bad shader args syntax ({}): {}", args, ex.what());
+        }
+    }
+
+    auto parsedClasses = g.ParseClassList(classes);
+    if (parsedClasses.empty())
+        return HyprLua::configError(L, "focus_shade.rule: classes did not contain any valid class names");
+
+    g.FocusShadeRules.push_back(State::FocusShadeRule{
+        .Classes = std::move(parsedClasses),
+        .Shader = shader,
+        .SameWorkspaceOnly = HyprLua::tableOptBool(L, 1, "same_workspace_only").value_or(true),
+    });
+
+    return 0;
+}

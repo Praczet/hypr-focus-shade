@@ -61,6 +61,12 @@ struct State {
         bool IntroducesTransparency;
     };
 
+    struct FocusShadeRule {
+        std::vector<std::string> Classes;
+        std::string Shader;
+        bool SameWorkspaceOnly;
+    };
+
     // assume everything is single threaded
 
     HANDLE Handle = nullptr;
@@ -71,6 +77,7 @@ struct State {
     SP<Config::Values::IValue> FocusShadeSameWorkspaceOnly;
     WindowRuleEffect RuleShade;
     std::vector<UserShader> UserShaders;
+    std::vector<FocusShadeRule> FocusShadeRules;
 
     std::vector<CHyprSignalListener> Listeners;
 
@@ -145,6 +152,8 @@ struct State {
             };
             registerLuaFn("load_shader", &LuaCallbacks::loadShader);
             registerLuaFn("dsp_shade", &LuaCallbacks::shade);
+            if (!HyprlandAPI::addLuaFunction(Handle, "focus_shade", "rule", &LuaCallbacks::focusShadeRule))
+                throw Efmt("Failed to register Lua function hl.plugin.focus_shade.rule");
         }
 
         LoadShaders = SP(new Config::Values::CStringValue(LOAD_SHADERS_KEY, "comma separated list of shaders to load, can be empty or \"all\"", "all"));
@@ -206,57 +215,68 @@ struct State {
             return UserShaders;
     }
 
-    Hyprutils::String::CConstVarList Config_FocusShadeClasses()
+    std::vector<std::string> ParseClassList(const std::string& classes)
     {
-        return Hyprutils::String::CConstVarList(
-            ((Config::Values::CStringValue*)FocusShadeClasses.get())->value()
-        );
-    }
+        std::vector<std::string> parsed;
 
-    std::string Config_FocusShadeShader()
-    {
-        return ((Config::Values::CStringValue*)FocusShadeShader.get())->value();
-    }
-
-    bool Config_FocusShadeSameWorkspaceOnly()
-    {
-        return ((Config::Values::CBoolValue*)FocusShadeSameWorkspaceOnly.get())->value();
-    }
-
-    bool ClassIsFocusShaded(const std::string& klass)
-    {
-        if (klass.empty())
-            return false;
-
-        for (auto& configuredClass : Config_FocusShadeClasses())
+        for (auto& klass : Hyprutils::String::CConstVarList(classes))
         {
-            if (klass == configuredClass)
-                return true;
+            if (!klass.empty())
+                parsed.push_back(std::string(klass));
         }
 
-        return false;
+        return parsed;
+    }
+
+    std::vector<FocusShadeRule> Config_FocusShadeRules()
+    {
+        if (!FocusShadeRules.empty())
+            return FocusShadeRules;
+
+        auto classes = ParseClassList(((Config::Values::CStringValue*)FocusShadeClasses.get())->value());
+        if (classes.empty())
+            return {};
+
+        return {
+            FocusShadeRule{
+                .Classes = classes,
+                .Shader = ((Config::Values::CStringValue*)FocusShadeShader.get())->value(),
+                .SameWorkspaceOnly = ((Config::Values::CBoolValue*)FocusShadeSameWorkspaceOnly.get())->value(),
+            }
+        };
+    }
+
+    const FocusShadeRule* MatchFocusShadeRule(PHLWINDOW active, PHLWINDOW window, const std::vector<FocusShadeRule>& rules)
+    {
+        if (!active || !window || active == window || active->m_class.empty() || window->m_class != active->m_class)
+            return nullptr;
+
+        for (const auto& rule : rules)
+        {
+            if (rule.SameWorkspaceOnly && window->m_workspace != active->m_workspace)
+                continue;
+
+            if (std::ranges::find(rule.Classes, active->m_class) != rule.Classes.end())
+                return &rule;
+        }
+
+        return nullptr;
     }
 
     void RecomputeFocusShade()
     {
         auto active = Desktop::focusState()->window();
-        const bool activeEligible = active && active->m_isMapped && ClassIsFocusShaded(active->m_class);
-        const auto shader = Config_FocusShadeShader();
-        const bool sameWorkspaceOnly = Config_FocusShadeSameWorkspaceOnly();
+        const bool activeEligible = active && active->m_isMapped;
+        const auto rules = Config_FocusShadeRules();
 
         for (const auto& window : g_pCompositor->m_windows)
         {
             if (!window || !window->m_isMapped)
                 continue;
 
-            const bool shouldShade =
-                activeEligible &&
-                window != active &&
-                window->m_class == active->m_class &&
-                (!sameWorkspaceOnly || window->m_workspace == active->m_workspace);
-
-            if (shouldShade)
-                Manager.ApplyFocusShader(window, shader);
+            const auto* rule = activeEligible ? MatchFocusShadeRule(active, window, rules) : nullptr;
+            if (rule)
+                Manager.ApplyFocusShader(window, rule->Shader);
             else
                 Manager.ClearFocusShader(window);
         }

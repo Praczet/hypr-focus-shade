@@ -30,6 +30,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
 
     g.Listeners.push_back(Event::bus()->m_events.config.preReload.listen([&] {
         g.UserShaders.clear();
+        g.FocusShadeRules.clear();
     }));
 
     g.Listeners.push_back(Event::bus()->m_events.config.reloaded.listen([&] {

@@ -62,7 +62,7 @@ plugin {
 
 The exact syntax may change as the plugin API and existing code shape dictate.
 
-Current Lua config shape:
+Simple Lua config shape:
 
 ```lua
 hl.config({
@@ -75,6 +75,26 @@ hl.config({
     },
 })
 ```
+
+For multiple class groups or different shaders per app, register rules:
+
+```lua
+hl.plugin.focus_shade.rule({
+    classes = "com.mitchellh.ghostty",
+    shader = "desaturate saturation=0.35",
+    same_workspace_only = true,
+})
+
+hl.plugin.focus_shade.rule({
+    classes = "firefox,org.mozilla.firefox",
+    shader = "desaturate saturation=0.55",
+    same_workspace_only = true,
+})
+```
+
+If one or more `hl.plugin.focus_shade.rule(...)` calls are present, they take
+priority over the simple `hl.config({ plugin = { focus_shade = ... } })`
+fallback.
 
 Internally, this registers Hyprland plugin config keys such as
 `plugin:focus_shade:classes`, matching Hyprland's `plugin:<namespace>:<key>`
