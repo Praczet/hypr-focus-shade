@@ -68,7 +68,7 @@ hl.config({
         focus_shade = {
             enabled = true,
             classes = "com.mitchellh.ghostty",
-            shader = "focusshade saturation=0.35 brightness=0.92 contrast=0.9",
+            shader = "focusshade saturation=0.25 brightness=0.86 contrast=0.82",
             same_workspace_only = true,
         },
     },
@@ -82,13 +82,7 @@ plugin is loaded:
 if hl.plugin.focus_shade ~= nil then
     hl.plugin.focus_shade.rule({
         classes = "com.mitchellh.ghostty",
-        shader = "focusshade saturation=0.25 brightness=0.92 contrast=0.9",
-        same_workspace_only = true,
-    })
-
-    hl.plugin.focus_shade.rule({
-        classes = "firefox,org.mozilla.firefox,zen",
-        shader = "focusshade saturation=0.55 brightness=0.96 contrast=0.95",
+        shader = "focusshade saturation=0.25 brightness=0.86 contrast=0.82",
         same_workspace_only = true,
     })
 end
@@ -97,6 +91,10 @@ end
 If one or more `hl.plugin.focus_shade.rule(...)` calls are present, they take
 priority over the simple `hl.config({ plugin = { focus_shade = ... } })`
 fallback.
+
+The Ghostty values above are intentionally stronger than a small opacity tweak:
+inactive sibling terminals become darker, flatter, and less colorful while the
+active terminal remains untouched.
 
 ## Commands
 
