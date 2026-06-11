@@ -68,6 +68,7 @@ Simple Lua config shape:
 hl.config({
     plugin = {
         focus_shade = {
+            enabled = true,
             classes = "com.mitchellh.ghostty",
             shader = "desaturate saturation=0.35",
             same_workspace_only = true,
@@ -120,6 +121,10 @@ hyprctl -j focus-shade status
 
 The status output includes the active window, configured rules, and windows that
 currently have plugin-owned focus shading applied.
+
+`enabled` controls the default state after config reload. Runtime commands like
+`hyprctl focus-shade disable` are session-only and reset to the configured value
+on reload.
 
 Internally, this registers Hyprland plugin config keys such as
 `plugin:focus_shade:classes`, matching Hyprland's `plugin:<namespace>:<key>`

@@ -76,6 +76,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
         try
         {
             g.Manager.RecheckWindowRules();
+            g.ResetFocusShadeEnabledFromConfig();
             g.RecomputeFocusShade();
         }
         catch (const std::exception& ex)

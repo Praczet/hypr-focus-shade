@@ -75,6 +75,7 @@ struct State {
     SP<Config::Values::IValue> FocusShadeClasses;
     SP<Config::Values::IValue> FocusShadeShader;
     SP<Config::Values::IValue> FocusShadeSameWorkspaceOnly;
+    SP<Config::Values::IValue> FocusShadeEnabledConfig;
     WindowRuleEffect RuleShade;
     WindowRuleEffect RuleShadeCompat;
     std::vector<UserShader> UserShaders;
@@ -136,6 +137,7 @@ struct State {
     inline static const char* FOCUS_SHADE_CLASSES_KEY = "plugin:focus_shade:classes";
     inline static const char* FOCUS_SHADE_SHADER_KEY = "plugin:focus_shade:shader";
     inline static const char* FOCUS_SHADE_SAME_WORKSPACE_ONLY_KEY = "plugin:focus_shade:same_workspace_only";
+    inline static const char* FOCUS_SHADE_ENABLED_KEY = "plugin:focus_shade:enabled";
 
     void AddConfigValues()
     {
@@ -178,6 +180,10 @@ struct State {
         FocusShadeSameWorkspaceOnly = SP(new Config::Values::CBoolValue(FOCUS_SHADE_SAME_WORKSPACE_ONLY_KEY, "only shade matching sibling windows on the active workspace", true));
         if (!HyprlandAPI::addConfigValueV2(Handle, FocusShadeSameWorkspaceOnly))
             throw Efmt("Failed to add config value {}", FOCUS_SHADE_SAME_WORKSPACE_ONLY_KEY);
+
+        FocusShadeEnabledConfig = SP(new Config::Values::CBoolValue(FOCUS_SHADE_ENABLED_KEY, "enable focus shading by default", true));
+        if (!HyprlandAPI::addConfigValueV2(Handle, FocusShadeEnabledConfig))
+            throw Efmt("Failed to add config value {}", FOCUS_SHADE_ENABLED_KEY);
 
         RuleShade = Desktop::Rule::windowEffects()->registerEffect("focus-shade:shade");
         RuleShadeCompat = Desktop::Rule::windowEffects()->registerEffect("darkwindow:shade");
@@ -298,6 +304,16 @@ struct State {
             else
                 Manager.ClearFocusShader(window);
         }
+    }
+
+    bool Config_FocusShadeEnabled()
+    {
+        return ((Config::Values::CBoolValue*)FocusShadeEnabledConfig.get())->value();
+    }
+
+    void ResetFocusShadeEnabledFromConfig()
+    {
+        FocusShadeEnabled = Config_FocusShadeEnabled();
     }
 
     static std::string JsonEscape(const std::string& input)
