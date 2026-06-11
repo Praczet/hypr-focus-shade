@@ -147,6 +147,22 @@ does not remove shaders that the user applied explicitly through upstream
 Hyprland plugins are loaded into the compositor process. A broken plugin can
 affect the session, so this should be built and tested carefully.
 
+For the current local workflow, rebuild and reload the plugin with:
+
+```sh
+scripts/dev-reload
+```
+
+or:
+
+```sh
+make dev-reload
+```
+
+The script builds `out/hypr-focus-shade.so`, unloads the previous instance from
+this checkout if present, loads the new build, reloads Hyprland, and prints
+`hyprctl focus-shade status`.
+
 Suggested path:
 
 1. Understand the current `Hypr-DarkWindow` shader/window plumbing.

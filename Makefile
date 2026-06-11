@@ -37,6 +37,9 @@ clean:
 load: unload $(TARGET)
 	hyprctl plugin load $(shell pwd)/$(TARGET)
 
+dev-reload:
+	scripts/dev-reload
+
 unload:
 	hyprctl plugin unload $(shell pwd)/$(TARGET)
 
@@ -44,4 +47,4 @@ VSC_CONF = .vscode/c_cpp_properties.json
 vscode:
 	cat <<< $$(jq '.configurations[].includePath = ("$(INCLUDES)"|gsub("(^|(?<= ))-I";"")|split(" "))' $(VSC_CONF)) > $(VSC_CONF)
 
-.PHONY: all vscode clean load unload
+.PHONY: all vscode clean load dev-reload unload

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+PLUGIN="$ROOT/out/hypr-focus-shade.so"
+JOBS="${JOBS:-$(nproc)}"
+
+cd "$ROOT"
+
+printf 'Building hypr-focus-shade...\n'
+make all -j"$JOBS"
+
+printf 'Reloading plugin: %s\n' "$PLUGIN"
+hyprctl plugin unload "$PLUGIN"
+sleep 1
+hyprctl plugin load "$PLUGIN"
+sleep 1
+hyprctl reload
+
+printf '\n'
+hyprctl focus-shade status
