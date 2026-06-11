@@ -1,5 +1,6 @@
 #include "ShadeManager.h"
 
+#include <cmath>
 #include <fstream>
 
 #include "State.h"
@@ -77,6 +78,58 @@ Uniforms ShaderDefinition::ParseArgs(const std::string& args)
     return out;
 }
 
+void ShaderDefinition::ValidateKnownArgs(const std::string& shaderName, const Uniforms& args)
+{
+    const auto requireScalar = [&](const std::string& name) -> float {
+        auto it = args.find(name);
+        if (it == args.end())
+            return 0;
+
+        if (it->second.size() != 1)
+            throw g.Efmt("{} expects '{}' to be a single float", shaderName, name);
+
+        if (!std::isfinite(it->second[0]))
+            throw g.Efmt("{} expects '{}' to be finite", shaderName, name);
+
+        return it->second[0];
+    };
+
+    const auto requireRange = [&](const std::string& name, float min, float max) {
+        auto it = args.find(name);
+        if (it == args.end())
+            return;
+
+        const auto value = requireScalar(name);
+        if (value < min || value > max)
+            throw g.Efmt("{} expects '{}' to be between {} and {}, got {}", shaderName, name, min, max, value);
+    };
+
+    if (shaderName == "desaturate")
+    {
+        for (const auto& [name, _] : args)
+        {
+            if (name != "saturation")
+                throw g.Efmt("{} does not support uniform '{}'", shaderName, name);
+        }
+
+        requireRange("saturation", 0.0, 1.0);
+        return;
+    }
+
+    if (shaderName == "focusshade")
+    {
+        for (const auto& [name, _] : args)
+        {
+            if (name != "saturation" && name != "brightness" && name != "contrast")
+                throw g.Efmt("{} does not support uniform '{}'", shaderName, name);
+        }
+
+        requireRange("saturation", 0.0, 1.0);
+        requireRange("brightness", 0.0, 2.0);
+        requireRange("contrast", 0.0, 2.0);
+    }
+}
+
 ShaderInstance* ShadeManager::AddShader(ShaderDefinition def)
 {
     auto found = m_Shaders.find(def.ID);
@@ -118,6 +171,7 @@ ShaderInstance* ShadeManager::AddShader(ShaderDefinition def)
 
     def.Args.merge(shader.Args);
     shader.Args = std::move(def.Args);
+    ShaderDefinition::ValidateKnownArgs(def.From.empty() ? def.ID : def.From, shader.Args);
     shader.Transparency = IntroducesTransparency{ shader.Transparency || def.Transparency };
 
     for (auto& [_, variant] : shader.Compiled->FragVariants)

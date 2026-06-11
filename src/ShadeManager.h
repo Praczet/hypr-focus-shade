@@ -15,6 +15,7 @@ struct ShaderDefinition
     IntroducesTransparency Transparency;
 
     static Uniforms ParseArgs(const std::string& args);
+    static void ValidateKnownArgs(const std::string& shaderName, const Uniforms& args);
 };
 
 class ShadeManager

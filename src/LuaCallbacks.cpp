@@ -81,15 +81,16 @@ int LuaCallbacks::shade(lua_State* L)
     size_t space = shader.find(" ");
     if (space != std::string::npos)
     {
+        auto name = Hyprutils::String::trim(shader.substr(0, space));
         auto args = shader.substr(space + 1);
         try
         {
-            ShaderDefinition::ParseArgs(args);
+            ShaderDefinition::ValidateKnownArgs(name, ShaderDefinition::ParseArgs(args));
         }
         catch (const std::exception& ex)
         {
             lua_pop(L, 1);
-            return HyprLua::configError(L, "focus_shade.dsp_shade: bad args syntax ({}): {}", args, ex.what());
+            return HyprLua::configError(L, "focus_shade.dsp_shade: bad shader args ({}): {}", args, ex.what());
         }
     }
 
@@ -126,14 +127,15 @@ int LuaCallbacks::focusShadeRule(lua_State* L)
     size_t space = shader.find(" ");
     if (space != std::string::npos)
     {
+        auto name = Hyprutils::String::trim(shader.substr(0, space));
         auto args = shader.substr(space + 1);
         try
         {
-            ShaderDefinition::ParseArgs(args);
+            ShaderDefinition::ValidateKnownArgs(name, ShaderDefinition::ParseArgs(args));
         }
         catch (const std::exception& ex)
         {
-            return HyprLua::configError(L, "focus_shade.rule: bad shader args syntax ({}): {}", args, ex.what());
+            return HyprLua::configError(L, "focus_shade.rule: bad shader args ({}): {}", args, ex.what());
         }
     }
 
