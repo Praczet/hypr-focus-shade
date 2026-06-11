@@ -123,9 +123,9 @@ struct State {
 
     inline static const char* USER_SHADER_CATEGORY = "plugin:darkwindow:shader"; // TODO: not currently used with the Lua config, clean up at some point
     inline static const char* LOAD_SHADERS_KEY = "plugin:darkwindow:load_shaders";
-    inline static const char* FOCUS_SHADE_CLASSES_KEY = "plugin:focus-shade:classes";
-    inline static const char* FOCUS_SHADE_SHADER_KEY = "plugin:focus-shade:shader";
-    inline static const char* FOCUS_SHADE_SAME_WORKSPACE_ONLY_KEY = "plugin:focus-shade:same_workspace_only";
+    inline static const char* FOCUS_SHADE_CLASSES_KEY = "plugin.focus-shade.classes";
+    inline static const char* FOCUS_SHADE_SHADER_KEY = "plugin.focus-shade.shader";
+    inline static const char* FOCUS_SHADE_SAME_WORKSPACE_ONLY_KEY = "plugin.focus-shade.same_workspace_only";
 
     void AddConfigValues()
     {

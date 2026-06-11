@@ -76,6 +76,10 @@ hl.config({
 })
 ```
 
+Internally, this registers Lua config keys such as
+`plugin.focus-shade.classes`, matching the keys emitted by Hyprland's Lua config
+table.
+
 The plugin should recompute shading when:
 
 - active window changes
