@@ -353,6 +353,101 @@ struct State {
         return out;
     }
 
+    std::string FormatRules(eHyprCtlOutputFormat format, const std::vector<FocusShadeRule>& rules)
+    {
+        std::ostringstream out;
+
+        if (format == FORMAT_JSON)
+        {
+            out << "[";
+            for (size_t i = 0; i < rules.size(); ++i)
+            {
+                const auto& rule = rules[i];
+                if (i > 0)
+                    out << ",";
+
+                out << "{\"classes\":[";
+                for (size_t j = 0; j < rule.Classes.size(); ++j)
+                {
+                    if (j > 0)
+                        out << ",";
+                    out << "\"" << JsonEscape(rule.Classes[j]) << "\"";
+                }
+                out << "],\"shader\":\"" << JsonEscape(rule.Shader) << "\",\"same_workspace_only\":"
+                    << (rule.SameWorkspaceOnly ? "true" : "false") << "}";
+            }
+            out << "]";
+            return out.str();
+        }
+
+        out << "rules:\n";
+        if (rules.empty())
+            out << "  none\n";
+        else
+        {
+            for (const auto& rule : rules)
+            {
+                out << "  - classes: ";
+                for (size_t i = 0; i < rule.Classes.size(); ++i)
+                {
+                    if (i > 0)
+                        out << ", ";
+                    out << rule.Classes[i];
+                }
+                out << "\n";
+                out << "    shader: " << rule.Shader << "\n";
+                out << "    same_workspace_only: " << (rule.SameWorkspaceOnly ? "true" : "false") << "\n";
+            }
+        }
+
+        return out.str();
+    }
+
+    std::string FormatShaded(eHyprCtlOutputFormat format)
+    {
+        std::ostringstream out;
+
+        if (format == FORMAT_JSON)
+        {
+            out << "[";
+            bool first = true;
+            for (const auto& window : g_pCompositor->m_windows)
+            {
+                auto shader = Manager.GetFocusShaderForWindow(window);
+                if (!shader)
+                    continue;
+
+                if (!first)
+                    out << ",";
+                first = false;
+
+                out << "{\"class\":\"" << JsonEscape(window->m_class) << "\",\"title\":\"" << JsonEscape(window->m_title)
+                    << "\",\"workspace\":" << window->workspaceID() << ",\"shader\":\"" << JsonEscape(shader->ID) << "\"}";
+            }
+            out << "]";
+            return out.str();
+        }
+
+        out << "shaded:\n";
+        bool anyShaded = false;
+        for (const auto& window : g_pCompositor->m_windows)
+        {
+            auto shader = Manager.GetFocusShaderForWindow(window);
+            if (!shader)
+                continue;
+
+            anyShaded = true;
+            out << "  - class: " << window->m_class << "\n";
+            out << "    title: " << window->m_title << "\n";
+            out << "    workspace: " << window->workspaceID() << "\n";
+            out << "    shader: " << shader->ID << "\n";
+        }
+        if (!anyShaded)
+            out << "  none\n";
+
+        return out.str();
+    }
+
     std::string HyprctlStatus(eHyprCtlOutputFormat format, std::string request)
     {
         auto subcommand = Hyprutils::String::trim(request);
@@ -386,7 +481,13 @@ struct State {
                 return std::string("focus shading ") + (FocusShadeEnabled ? "enabled\n" : "disabled\n");
             }
 
-            return "unknown focus-shade command: " + subcommand + "\nusage: hyprctl focus-shade [status|enable|disable|toggle]\n";
+            if (subcommand == "rules")
+                return FormatRules(format, Config_FocusShadeRules());
+
+            if (subcommand == "shaded")
+                return FormatShaded(format);
+
+            return "unknown focus-shade command: " + subcommand + "\nusage: hyprctl focus-shade [status|rules|shaded|enable|disable|toggle]\n";
         }
 
         auto active = Desktop::focusState()->window();
@@ -404,40 +505,9 @@ struct State {
             else
                 out << "null";
 
-            out << ",\"rules\":[";
-            for (size_t i = 0; i < rules.size(); ++i)
-            {
-                const auto& rule = rules[i];
-                if (i > 0)
-                    out << ",";
-
-                out << "{\"classes\":[";
-                for (size_t j = 0; j < rule.Classes.size(); ++j)
-                {
-                    if (j > 0)
-                        out << ",";
-                    out << "\"" << JsonEscape(rule.Classes[j]) << "\"";
-                }
-                out << "],\"shader\":\"" << JsonEscape(rule.Shader) << "\",\"same_workspace_only\":"
-                    << (rule.SameWorkspaceOnly ? "true" : "false") << "}";
-            }
-            out << "],\"shaded\":[";
-
-            bool first = true;
-            for (const auto& window : g_pCompositor->m_windows)
-            {
-                auto shader = Manager.GetFocusShaderForWindow(window);
-                if (!shader)
-                    continue;
-
-                if (!first)
-                    out << ",";
-                first = false;
-
-                out << "{\"class\":\"" << JsonEscape(window->m_class) << "\",\"title\":\"" << JsonEscape(window->m_title)
-                    << "\",\"workspace\":" << window->workspaceID() << ",\"shader\":\"" << JsonEscape(shader->ID) << "\"}";
-            }
-            out << "]}";
+            out << ",\"rules\":" << FormatRules(format, rules);
+            out << ",\"shaded\":" << FormatShaded(format);
+            out << "}";
             return out.str();
         }
 
@@ -454,42 +524,8 @@ struct State {
         else
             out << "  none\n";
 
-        out << "\nrules:\n";
-        if (rules.empty())
-            out << "  none\n";
-        else
-        {
-            for (const auto& rule : rules)
-            {
-                out << "  - classes: ";
-                for (size_t i = 0; i < rule.Classes.size(); ++i)
-                {
-                    if (i > 0)
-                        out << ", ";
-                    out << rule.Classes[i];
-                }
-                out << "\n";
-                out << "    shader: " << rule.Shader << "\n";
-                out << "    same_workspace_only: " << (rule.SameWorkspaceOnly ? "true" : "false") << "\n";
-            }
-        }
-
-        out << "\nshaded:\n";
-        bool anyShaded = false;
-        for (const auto& window : g_pCompositor->m_windows)
-        {
-            auto shader = Manager.GetFocusShaderForWindow(window);
-            if (!shader)
-                continue;
-
-            anyShaded = true;
-            out << "  - class: " << window->m_class << "\n";
-            out << "    title: " << window->m_title << "\n";
-            out << "    workspace: " << window->workspaceID() << "\n";
-            out << "    shader: " << shader->ID << "\n";
-        }
-        if (!anyShaded)
-            out << "  none\n";
+        out << "\n" << FormatRules(format, rules);
+        out << "\n" << FormatShaded(format);
 
         return out.str();
     }

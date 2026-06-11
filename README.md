@@ -169,6 +169,8 @@ Inspect current focus-shade state with:
 
 ```sh
 hyprctl focus-shade status
+hyprctl focus-shade rules
+hyprctl focus-shade shaded
 ```
 
 Temporarily enable, disable, or toggle focus shading:
@@ -183,10 +185,13 @@ JSON output is also available:
 
 ```sh
 hyprctl -j focus-shade status
+hyprctl -j focus-shade rules
+hyprctl -j focus-shade shaded
 ```
 
-The status output includes the active window, configured rules, and windows that
-currently have plugin-owned focus shading applied.
+The `status` output includes the active window, configured rules, and windows
+that currently have plugin-owned focus shading applied. Use `rules` or `shaded`
+when you only need one part of that state.
 
 `enabled` controls the default state after config reload. Runtime commands like
 `hyprctl focus-shade disable` are session-only and reset to the configured value
