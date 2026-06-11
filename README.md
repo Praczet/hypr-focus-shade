@@ -1,5 +1,99 @@
-# Hypr-DarkWindow
-Hyprland plugin that adds the possibility to modify the fragment shader of specific windows.
+# hypr-focus-shade
+
+Hyprland plugin experiment for focus-aware window shading.
+
+This repository is currently a fork of
+[`Hypr-DarkWindow`](https://github.com/micha4w/Hypr-DarkWindow), a plugin that
+can modify the fragment shader of specific windows. The fork exists because
+normal Hyprland config can dim windows, but it cannot cleanly express the
+effect this project is aiming for:
+
+```text
+when one configured window is active,
+shade/desaturate sibling windows of the same class on the current workspace
+```
+
+The first target is Ghostty. The desired behavior is:
+
+```text
+active Ghostty on current workspace        -> normal
+other Ghostty windows on current workspace -> quieter / desaturated
+Ghostty on other workspaces                -> unchanged
+unrelated windows                          -> unchanged
+```
+
+This is not meant to be a global night-mode tool. It is a small focus contrast
+plugin: the active terminal stays readable, nearby sibling terminals step back.
+
+## Status
+
+Planning / early fork stage.
+
+The upstream `Hypr-DarkWindow` functionality is still the base. The first job is
+to preserve that behavior while adding a narrow focus-shade path on top of it.
+
+## Why This Fork Exists
+
+Hyprland already has several related tools, but each solves a different problem:
+
+- `opacity = "active inactive"` can dim one app by class, but it uses
+  transparency rather than saturation.
+- `decoration:dim_inactive` dims inactive windows globally, not per class.
+- `dim_around` dims the area around a focused window, not sibling windows.
+- `hyprsunset` changes gamma/temperature globally, not per window.
+- `screen_shader`/shader tools generally affect the whole screen.
+
+This fork is for per-window, focus-aware shading.
+
+## Planned Behavior
+
+Rough target config shape:
+
+```ini
+plugin {
+    focus-shade {
+        classes = com.mitchellh.ghostty
+        same_workspace_only = true
+        shader = desaturate
+        saturation = 0.35
+    }
+}
+```
+
+The exact syntax may change as the plugin API and existing code shape dictate.
+
+The plugin should recompute shading when:
+
+- active window changes
+- a window opens or closes
+- workspace changes
+- a matching window moves between workspaces, if hookable
+- config reloads, if hookable
+
+It should also track plugin-owned effects separately, so clearing focus shading
+does not remove shaders that the user applied explicitly through upstream
+`darkwindow:shade` rules or dispatchers.
+
+## Development Notes
+
+Hyprland plugins are loaded into the compositor process. A broken plugin can
+affect the session, so this should be built and tested carefully.
+
+Suggested path:
+
+1. Understand the current `Hypr-DarkWindow` shader/window plumbing.
+2. Add or identify a desaturation shader.
+3. Add a manual dispatcher/config path for applying that shader.
+4. Add focus/workspace/class automation.
+5. Rename/document the final surface once behavior is proven.
+
+Test in a nested Hyprland session before loading experimental builds into a
+main desktop session.
+
+## Upstream Base: Hypr-DarkWindow
+
+The content below is the original upstream README material, kept because this
+fork still depends on the same shader and configuration model.
 
 ![preview](./res/preview.png)
 
