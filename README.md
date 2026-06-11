@@ -51,7 +51,7 @@ Rough target config shape:
 
 ```ini
 plugin {
-    focus-shade {
+    focus_shade {
         classes = com.mitchellh.ghostty
         same_workspace_only = true
         shader = desaturate
@@ -67,7 +67,7 @@ Current Lua config shape:
 ```lua
 hl.config({
     plugin = {
-        ["focus-shade"] = {
+        focus_shade = {
             classes = "com.mitchellh.ghostty",
             shader = "desaturate saturation=0.35",
             same_workspace_only = true,
@@ -76,9 +76,9 @@ hl.config({
 })
 ```
 
-Internally, this registers Lua config keys such as
-`plugin.focus-shade.classes`, matching the keys emitted by Hyprland's Lua config
-table.
+Internally, this registers Hyprland plugin config keys such as
+`plugin:focus_shade:classes`, matching Hyprland's `plugin:<namespace>:<key>`
+plugin-value format.
 
 The plugin should recompute shading when:
 
