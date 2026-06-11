@@ -104,6 +104,14 @@ Inspect current focus-shade state with:
 hyprctl focus-shade status
 ```
 
+Temporarily enable, disable, or toggle focus shading:
+
+```sh
+hyprctl focus-shade enable
+hyprctl focus-shade disable
+hyprctl focus-shade toggle
+```
+
 JSON output is also available:
 
 ```sh

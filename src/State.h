@@ -80,6 +80,7 @@ struct State {
     std::vector<UserShader> UserShaders;
     std::vector<FocusShadeRule> FocusShadeRules;
     SP<SHyprCtlCommand> StatusCommand;
+    bool FocusShadeEnabled = true;
 
     std::vector<CHyprSignalListener> Listeners;
 
@@ -283,7 +284,7 @@ struct State {
     void RecomputeFocusShade()
     {
         auto active = Desktop::focusState()->window();
-        const bool activeEligible = active && active->m_isMapped;
+        const bool activeEligible = FocusShadeEnabled && active && active->m_isMapped;
         const auto rules = Config_FocusShadeRules();
 
         for (const auto& window : g_pCompositor->m_windows)
@@ -329,7 +330,32 @@ struct State {
             subcommand = Hyprutils::String::trim(subcommand.substr(std::string("focus-shade ").size()));
 
         if (!subcommand.empty() && subcommand != "status")
-            return "unknown focus-shade command: " + subcommand + "\nusage: hyprctl focus-shade status\n";
+        {
+            if (subcommand == "enable")
+            {
+                FocusShadeEnabled = true;
+                RecomputeFocusShade();
+                return format == FORMAT_JSON ? "{\"enabled\":true}\n" : "focus shading enabled\n";
+            }
+
+            if (subcommand == "disable")
+            {
+                FocusShadeEnabled = false;
+                RecomputeFocusShade();
+                return format == FORMAT_JSON ? "{\"enabled\":false}\n" : "focus shading disabled\n";
+            }
+
+            if (subcommand == "toggle")
+            {
+                FocusShadeEnabled = !FocusShadeEnabled;
+                RecomputeFocusShade();
+                if (format == FORMAT_JSON)
+                    return std::string("{\"enabled\":") + (FocusShadeEnabled ? "true" : "false") + "}\n";
+                return std::string("focus shading ") + (FocusShadeEnabled ? "enabled\n" : "disabled\n");
+            }
+
+            return "unknown focus-shade command: " + subcommand + "\nusage: hyprctl focus-shade [status|enable|disable|toggle]\n";
+        }
 
         auto active = Desktop::focusState()->window();
         const auto rules = Config_FocusShadeRules();
@@ -338,6 +364,7 @@ struct State {
         {
             std::ostringstream out;
             out << "{";
+            out << "\"enabled\":" << (FocusShadeEnabled ? "true" : "false") << ",";
             out << "\"active\":";
             if (active)
                 out << "{\"class\":\"" << JsonEscape(active->m_class) << "\",\"title\":\"" << JsonEscape(active->m_title)
@@ -384,6 +411,7 @@ struct State {
 
         std::ostringstream out;
         out << "hypr-focus-shade\n\n";
+        out << "enabled: " << (FocusShadeEnabled ? "true" : "false") << "\n\n";
         out << "active:\n";
         if (active)
         {
