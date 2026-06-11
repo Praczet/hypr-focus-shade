@@ -43,6 +43,26 @@ inline static const std::map<std::string, WindowShader> WINDOW_SHADERS = {
         { "tintColor", { 1, 0, 0 } },
         { "tintStrength", { 0.1 } },
     }, {} } },
+    { "desaturate", { R"glsl(
+        uniform float saturation;
+
+        void windowShader(inout vec4 color) {
+            if (color.a <= 0.0) {
+                return;
+            }
+
+            // remove premultiplied alpha
+            color.rgb /= color.a;
+
+            float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+            color.rgb = mix(vec3(gray), color.rgb, saturation);
+
+            // remultiply alpha
+            color.rgb *= color.a;
+        }
+    )glsl", {
+        { "saturation", { 0.35 } },
+    }, {} } },
     // Original shader by ikz87
     // Applies opacity changes to pixels similar to one color
     { "chromakey", { R"glsl(
