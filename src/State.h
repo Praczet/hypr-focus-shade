@@ -79,6 +79,7 @@ struct State {
     WindowRuleEffect RuleShadeCompat;
     std::vector<UserShader> UserShaders;
     std::vector<FocusShadeRule> FocusShadeRules;
+    SP<SHyprCtlCommand> StatusCommand;
 
     std::vector<CHyprSignalListener> Listeners;
 
@@ -179,6 +180,16 @@ struct State {
 
         RuleShade = Desktop::Rule::windowEffects()->registerEffect("focus-shade:shade");
         RuleShadeCompat = Desktop::Rule::windowEffects()->registerEffect("darkwindow:shade");
+
+        StatusCommand = HyprlandAPI::registerHyprCtlCommand(Handle, SHyprCtlCommand{
+            .name = "focus-shade",
+            .exact = false,
+            .fn = [&](eHyprCtlOutputFormat format, std::string request) {
+                return HyprctlStatus(format, request);
+            },
+        });
+        if (!StatusCommand)
+            throw Efmt("Failed to register hyprctl focus-shade command");
     }
 
     Hyprutils::String::CConstVarList Config_LoadedShaders()
@@ -288,6 +299,141 @@ struct State {
         }
     }
 
+    static std::string JsonEscape(const std::string& input)
+    {
+        std::string out;
+        out.reserve(input.size());
+
+        for (const char c : input)
+        {
+            switch (c)
+            {
+                case '"': out += "\\\""; break;
+                case '\\': out += "\\\\"; break;
+                case '\n': out += "\\n"; break;
+                case '\r': out += "\\r"; break;
+                case '\t': out += "\\t"; break;
+                default: out += c; break;
+            }
+        }
+
+        return out;
+    }
+
+    std::string HyprctlStatus(eHyprCtlOutputFormat format, std::string request)
+    {
+        auto subcommand = Hyprutils::String::trim(request);
+        if (subcommand == "focus-shade")
+            subcommand = "";
+        else if (subcommand.starts_with("focus-shade "))
+            subcommand = Hyprutils::String::trim(subcommand.substr(std::string("focus-shade ").size()));
+
+        if (!subcommand.empty() && subcommand != "status")
+            return "unknown focus-shade command: " + subcommand + "\nusage: hyprctl focus-shade status\n";
+
+        auto active = Desktop::focusState()->window();
+        const auto rules = Config_FocusShadeRules();
+
+        if (format == FORMAT_JSON)
+        {
+            std::ostringstream out;
+            out << "{";
+            out << "\"active\":";
+            if (active)
+                out << "{\"class\":\"" << JsonEscape(active->m_class) << "\",\"title\":\"" << JsonEscape(active->m_title)
+                    << "\",\"workspace\":" << active->workspaceID() << "}";
+            else
+                out << "null";
+
+            out << ",\"rules\":[";
+            for (size_t i = 0; i < rules.size(); ++i)
+            {
+                const auto& rule = rules[i];
+                if (i > 0)
+                    out << ",";
+
+                out << "{\"classes\":[";
+                for (size_t j = 0; j < rule.Classes.size(); ++j)
+                {
+                    if (j > 0)
+                        out << ",";
+                    out << "\"" << JsonEscape(rule.Classes[j]) << "\"";
+                }
+                out << "],\"shader\":\"" << JsonEscape(rule.Shader) << "\",\"same_workspace_only\":"
+                    << (rule.SameWorkspaceOnly ? "true" : "false") << "}";
+            }
+            out << "],\"shaded\":[";
+
+            bool first = true;
+            for (const auto& window : g_pCompositor->m_windows)
+            {
+                auto shader = Manager.GetFocusShaderForWindow(window);
+                if (!shader)
+                    continue;
+
+                if (!first)
+                    out << ",";
+                first = false;
+
+                out << "{\"class\":\"" << JsonEscape(window->m_class) << "\",\"title\":\"" << JsonEscape(window->m_title)
+                    << "\",\"workspace\":" << window->workspaceID() << ",\"shader\":\"" << JsonEscape(shader->ID) << "\"}";
+            }
+            out << "]}";
+            return out.str();
+        }
+
+        std::ostringstream out;
+        out << "hypr-focus-shade\n\n";
+        out << "active:\n";
+        if (active)
+        {
+            out << "  class: " << active->m_class << "\n";
+            out << "  title: " << active->m_title << "\n";
+            out << "  workspace: " << active->workspaceID() << "\n";
+        }
+        else
+            out << "  none\n";
+
+        out << "\nrules:\n";
+        if (rules.empty())
+            out << "  none\n";
+        else
+        {
+            for (const auto& rule : rules)
+            {
+                out << "  - classes: ";
+                for (size_t i = 0; i < rule.Classes.size(); ++i)
+                {
+                    if (i > 0)
+                        out << ", ";
+                    out << rule.Classes[i];
+                }
+                out << "\n";
+                out << "    shader: " << rule.Shader << "\n";
+                out << "    same_workspace_only: " << (rule.SameWorkspaceOnly ? "true" : "false") << "\n";
+            }
+        }
+
+        out << "\nshaded:\n";
+        bool anyShaded = false;
+        for (const auto& window : g_pCompositor->m_windows)
+        {
+            auto shader = Manager.GetFocusShaderForWindow(window);
+            if (!shader)
+                continue;
+
+            anyShaded = true;
+            out << "  - class: " << window->m_class << "\n";
+            out << "    title: " << window->m_title << "\n";
+            out << "    workspace: " << window->workspaceID() << "\n";
+            out << "    shader: " << shader->ID << "\n";
+        }
+        if (!anyShaded)
+            out << "  none\n";
+
+        return out.str();
+    }
+
     void RemoveConfigValues() {
         if (auto legacy = Config::Legacy::mgr())
         {
@@ -300,6 +446,8 @@ struct State {
 
         Desktop::Rule::windowEffects()->unregisterEffect(RuleShade);
         Desktop::Rule::windowEffects()->unregisterEffect(RuleShadeCompat);
+        if (StatusCommand)
+            HyprlandAPI::unregisterHyprCtlCommand(Handle, StatusCommand);
     }
 
 

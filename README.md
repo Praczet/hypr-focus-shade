@@ -96,6 +96,23 @@ If one or more `hl.plugin.focus_shade.rule(...)` calls are present, they take
 priority over the simple `hl.config({ plugin = { focus_shade = ... } })`
 fallback.
 
+## Debugging
+
+Inspect current focus-shade state with:
+
+```sh
+hyprctl focus-shade status
+```
+
+JSON output is also available:
+
+```sh
+hyprctl -j focus-shade status
+```
+
+The status output includes the active window, configured rules, and windows that
+currently have plugin-owned focus shading applied.
+
 Internally, this registers Hyprland plugin config keys such as
 `plugin:focus_shade:classes`, matching Hyprland's `plugin:<namespace>:<key>`
 plugin-value format.

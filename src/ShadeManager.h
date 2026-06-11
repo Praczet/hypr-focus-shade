@@ -31,6 +31,7 @@ public:
     void ClearFocusShader(PHLWINDOW window);
     void ForgetWindow(PHLWINDOW window);
     ShaderInstance* GetShaderForWindow(PHLWINDOW window);
+    ShaderInstance* GetFocusShaderForWindow(PHLWINDOW window);
 
     void PreRenderMonitor(PHLMONITOR monitor);
     void MouseMove();

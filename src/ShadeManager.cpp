@@ -278,6 +278,12 @@ ShaderInstance* ShadeManager::GetShaderForWindow(PHLWINDOW window)
     return it != m_Windows.end() ? it->second.ActiveShader : nullptr;
 }
 
+ShaderInstance* ShadeManager::GetFocusShaderForWindow(PHLWINDOW window)
+{
+    auto it = m_Windows.find(window);
+    return it != m_Windows.end() ? it->second.FocusShader : nullptr;
+}
+
 
 void ShadeManager::PreRenderMonitor(PHLMONITOR monitor)
 {
