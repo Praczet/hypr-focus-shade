@@ -29,6 +29,7 @@ public:
     void ApplyDispatchedShader(PHLWINDOW window, const std::string& shader);
     void ApplyFocusShader(PHLWINDOW window, const std::string& shader);
     void ClearFocusShader(PHLWINDOW window);
+    void ClearFocusShaders();
     void ForgetWindow(PHLWINDOW window);
     ShaderInstance* GetShaderForWindow(PHLWINDOW window);
     ShaderInstance* GetFocusShaderForWindow(PHLWINDOW window);

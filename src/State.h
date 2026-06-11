@@ -132,6 +132,22 @@ struct State {
         }
     };
 
+    void UnhookFunctions()
+    {
+        for (auto& hook : std::views::reverse(Hooks))
+        {
+            if (!hook.hypr)
+                continue;
+
+            if (!HyprlandAPI::removeFunctionHook(Handle, hook.hypr))
+                Log::logger->log(Log::ERR, "[hypr-focus-shade] Failed to remove hook {}::{}", hook.className, hook.methodName);
+
+            hook.hypr = nullptr;
+            if (hook.originalPtr)
+                *hook.originalPtr = nullptr;
+        }
+    }
+
     inline static const char* USER_SHADER_CATEGORY = "plugin:focus_shade:shader"; // TODO: not currently used with the Lua config, clean up at some point
     inline static const char* LOAD_SHADERS_KEY = "plugin:focus_shade:load_shaders";
     inline static const char* FOCUS_SHADE_CLASSES_KEY = "plugin:focus_shade:classes";
@@ -492,6 +508,17 @@ struct State {
         Desktop::Rule::windowEffects()->unregisterEffect(RuleShadeCompat);
         if (StatusCommand)
             HyprlandAPI::unregisterHyprCtlCommand(Handle, StatusCommand);
+    }
+
+    void Shutdown()
+    {
+        Manager.ClearFocusShaders();
+        Listeners.clear();
+        RemoveConfigValues();
+        UnhookFunctions();
+        Manager = ShadeManager();
+        UserShaders.clear();
+        FocusShadeRules.clear();
     }
 
 

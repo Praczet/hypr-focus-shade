@@ -150,7 +150,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
 
 APICALL EXPORT void PLUGIN_EXIT()
 {
-    g.RemoveConfigValues();
+    g.Shutdown();
     g = State();
 }
 

@@ -267,6 +267,21 @@ void ShadeManager::ClearFocusShader(PHLWINDOW window)
     windowShaderChanged(it);
 }
 
+void ShadeManager::ClearFocusShaders()
+{
+    std::vector<PHLWINDOW> windows;
+    windows.reserve(m_Windows.size());
+
+    for (const auto& [window, config] : m_Windows)
+    {
+        if (config.FocusShader)
+            windows.push_back(window);
+    }
+
+    for (const auto& window : windows)
+        ClearFocusShader(window);
+}
+
 void ShadeManager::ForgetWindow(PHLWINDOW window)
 {
     m_Windows.erase(window);
