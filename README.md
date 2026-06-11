@@ -68,7 +68,7 @@ hl.config({
         focus_shade = {
             enabled = true,
             classes = "com.mitchellh.ghostty",
-            shader = "desaturate saturation=0.35",
+            shader = "focusshade saturation=0.35 brightness=0.92 contrast=0.9",
             same_workspace_only = true,
         },
     },
@@ -82,13 +82,13 @@ plugin is loaded:
 if hl.plugin.focus_shade ~= nil then
     hl.plugin.focus_shade.rule({
         classes = "com.mitchellh.ghostty",
-        shader = "desaturate saturation=0.25",
+        shader = "focusshade saturation=0.25 brightness=0.92 contrast=0.9",
         same_workspace_only = true,
     })
 
     hl.plugin.focus_shade.rule({
         classes = "firefox,org.mozilla.firefox,zen",
-        shader = "desaturate saturation=0.55",
+        shader = "focusshade saturation=0.55 brightness=0.96 contrast=0.95",
         same_workspace_only = true,
     })
 end
@@ -241,6 +241,7 @@ hl.config({
 | **invert**    | _No uniforms_ <br> Applies smart color inversion                                                                                                                                                                                                                                                                                                                             |
 | **tint**      | <ul><li>_tintStrength_ = `float` (0-1) </li><li>_tintColor_ = `vec3`</li></ul> Tints the Window <br>                                                                                                                                                                                                                                                                         |
 | **desaturate** | <ul><li>_saturation_ = `float` (0-1, default `0.35`)</li></ul> Moves the window color toward grayscale. `1.0` keeps the original color; `0.0` is fully grayscale. |
+| **focusshade** | <ul><li>_saturation_ = `float` (0-1, default `0.35`)</li><li>_brightness_ = `float` (default `0.92`)</li><li>_contrast_ = `float` (default `0.9`)</li></ul> Combines desaturation, brightness, and contrast adjustment for inactive sibling windows. `1.0` is neutral for each uniform. |
 | **chromakey** | <ul> <li>_bkg_ = `vec3` <br> The background color of the Window </li> <li>_similarity_ = `float` <br> How many similar colors should be affected</li> <li>_amount_ = `float` <br> How much similar colors should be changed</li> <li>_targetOpacity_ = `float` <br> Target opacity for similar colors</li> </ul> Applies opacity changes to pixels similar to one color <br> |
 
 If you want to use your own Shaders, check [this](#custom-shaders) out.
