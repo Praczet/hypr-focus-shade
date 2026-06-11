@@ -240,6 +240,31 @@ void ShadeManager::ApplyDispatchedShader(PHLWINDOW window, const std::string& sh
     windowShaderChanged(it);
 }
 
+void ShadeManager::ApplyFocusShader(PHLWINDOW window, const std::string& shader)
+{
+    if (!window) return;
+
+    auto it = m_Windows.find(window);
+    if (it != m_Windows.end())
+        it->second.FocusShader = EnsureShader(shader);
+    else
+        it = m_Windows.emplace(window, ShadedWindow{ .FocusShader = EnsureShader(shader) }).first;
+
+    windowShaderChanged(it);
+}
+
+void ShadeManager::ClearFocusShader(PHLWINDOW window)
+{
+    if (!window) return;
+
+    auto it = m_Windows.find(window);
+    if (it == m_Windows.end() || !it->second.FocusShader)
+        return;
+
+    it->second.FocusShader = nullptr;
+    windowShaderChanged(it);
+}
+
 void ShadeManager::ForgetWindow(PHLWINDOW window)
 {
     m_Windows.erase(window);
@@ -289,6 +314,8 @@ void ShadeManager::windowShaderChanged(decltype(m_Windows)::iterator it) {
     }
     else if (s.DispatchShader)
         s.ActiveShader = s.DispatchShader;
+    else if (s.FocusShader)
+        s.ActiveShader = s.FocusShader;
     else if (s.RuleShader)
         s.ActiveShader = s.RuleShader;
 
@@ -297,4 +324,3 @@ void ShadeManager::windowShaderChanged(decltype(m_Windows)::iterator it) {
     if (!s.ActiveShader)
         m_Windows.erase(it);
 }
-

@@ -27,6 +27,8 @@ public:
     void RecheckWindowRules();
     void ApplyWindowRuleShader(PHLWINDOW window);
     void ApplyDispatchedShader(PHLWINDOW window, const std::string& shader);
+    void ApplyFocusShader(PHLWINDOW window, const std::string& shader);
+    void ClearFocusShader(PHLWINDOW window);
     void ForgetWindow(PHLWINDOW window);
     ShaderInstance* GetShaderForWindow(PHLWINDOW window);
 
@@ -37,10 +39,11 @@ private:
     std::map<std::string, ShaderInstance> m_Shaders;
 
     struct ShadedWindow {
-        ShaderInstance* RuleShader;
-        ShaderInstance* DispatchShader;
+        ShaderInstance* RuleShader = nullptr;
+        ShaderInstance* DispatchShader = nullptr;
+        ShaderInstance* FocusShader = nullptr;
 
-        ShaderInstance* ActiveShader;
+        ShaderInstance* ActiveShader = nullptr;
     };
 
     std::map<PHLWINDOW, ShadedWindow> m_Windows;
