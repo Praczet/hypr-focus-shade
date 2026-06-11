@@ -24,7 +24,7 @@ HOOK_FUNCTION(Render::, CRenderPass, render,
 
                 if (shaders)
                 {
-                    // bool success = SaveTextureAsBMP(*s->m_data.texture, "/home/micha4w/Code/Linux/Hypr-DarkWindow/todo/" + s->m_data.pWindow->m_class + ".bmp");
+                    // bool success = SaveTextureAsBMP(*s->m_data.texture, "/tmp/hypr-focus-shade/" + s->m_data.pWindow->m_class + ".bmp");
                     if (shaders->Transparency && s->m_data.alpha >= 1)
                         // so the blur gets drawn
                         s->m_data.alpha = 0.999f;

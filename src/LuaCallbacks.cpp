@@ -8,11 +8,11 @@ namespace HyprLua = Config::Lua::Bindings::Internal;
 int LuaCallbacks::loadShader(lua_State* L)
 {
     if (lua_gettop(L) != 2)
-        return HyprLua::configError(L, "darkwindow.load_shader: expected 2 arguments (id, config)");
+        return HyprLua::configError(L, "focus_shade.load_shader: expected 2 arguments (id, config)");
     if (!lua_isstring(L, 1))
-        return HyprLua::configError(L, "darkwindow.load_shader: expected first argument (id) to be a string");
+        return HyprLua::configError(L, "focus_shade.load_shader: expected first argument (id) to be a string");
     if (!lua_istable(L, 2))
-        return HyprLua::configError(L, "darkwindow.load_shader: expected second argument (config) to be a table { from?, path?, args?, introduces_transparency? }");
+        return HyprLua::configError(L, "focus_shade.load_shader: expected second argument (config) to be a table { from?, path?, args?, introduces_transparency? }");
 
     std::string id = lua_tostring(L, 1);
 
@@ -22,7 +22,7 @@ int LuaCallbacks::loadShader(lua_State* L)
     auto introducesTransparency = HyprLua::tableOptBool(L, 2, "introduces_transparency").value_or(false);
 
     if (from.empty() && path.empty())
-        return HyprLua::configError(L, "darkwindow.load_shader: second argument (config) needs to have either 'from' or 'path' field set");
+        return HyprLua::configError(L, "focus_shade.load_shader: second argument (config) needs to have either 'from' or 'path' field set");
 
     g.UserShaders.push_back(State::UserShader{
         .Id = id,
@@ -45,7 +45,7 @@ static int dispatchedShade(lua_State* L)
     if (!lua_isnil(L, lua_upvalueindex(2))) {
         window = g_pCompositor->getWindowByRegex(lua_tostring(L, lua_upvalueindex(2)));
         if (!window)
-            return HyprLua::dispatcherError(L, "darkwindow.<dispatched shade>: window not found", eActionErrorLevel::ERROR, eActionErrorCode::NOT_FOUND);
+            return HyprLua::dispatcherError(L, "focus_shade.<dispatched shade>: window not found", eActionErrorLevel::ERROR, eActionErrorCode::NOT_FOUND);
     }
     else
         window = Desktop::focusState()->window();
@@ -56,7 +56,7 @@ static int dispatchedShade(lua_State* L)
     }
     catch (const std::exception& ex)
     {
-        return HyprLua::dispatcherError(L, std::format("darkwindow.<dispatched shade>: failed to apply shader ({}) {}", shader, ex.what()),
+        return HyprLua::dispatcherError(L, std::format("focus_shade.<dispatched shade>: failed to apply shader ({}) {}", shader, ex.what()),
                                         eActionErrorLevel::ERROR, eActionErrorCode::EXECUTION_FAILED);
     }
 
@@ -66,15 +66,15 @@ static int dispatchedShade(lua_State* L)
 int LuaCallbacks::shade(lua_State* L)
 {
     if (lua_gettop(L) != 1)
-        return HyprLua::configError(L, "darkwindow.load_shader: expected 1 argument (table { window?, shader })");
+        return HyprLua::configError(L, "focus_shade.load_shader: expected 1 argument (table { window?, shader })");
     if (!lua_istable(L, 1))
-        return HyprLua::configError(L, "darkwindow.dsp_shade: expected a table { window?, shader }");
+        return HyprLua::configError(L, "focus_shade.dsp_shade: expected a table { window?, shader }");
 
     lua_getfield(L, 1, "shader");
     if (!lua_isstring(L, -1))
     {
         lua_pop(L, 1);
-        return HyprLua::configError(L, "darkwindow.dsp_shade: shader field is not a string");
+        return HyprLua::configError(L, "focus_shade.dsp_shade: shader field is not a string");
     }
 
     std::string shader = lua_tostring(L, -1);
@@ -89,18 +89,18 @@ int LuaCallbacks::shade(lua_State* L)
         catch (const std::exception& ex)
         {
             lua_pop(L, 1);
-            return HyprLua::configError(L, "darkwindow.dsp_shade: bad args syntax ({}): {}", args, ex.what());
+            return HyprLua::configError(L, "focus_shade.dsp_shade: bad args syntax ({}): {}", args, ex.what());
         }
     }
 
     lua_getfield(L, 1, "window");
     if (!lua_isnil(L, -1))
     {
-        auto selector = HyprLua::windowSelectorFromLuaSelectorOrObject(L, -1, "darkwindow.dsp_shade");
+        auto selector = HyprLua::windowSelectorFromLuaSelectorOrObject(L, -1, "focus_shade.dsp_shade");
         if (!selector)
         {
             lua_pop(L, 2);
-            return HyprLua::configError(L, "darkwindow.dsp_shade: window field is not a valid window selector or object");
+            return HyprLua::configError(L, "focus_shade.dsp_shade: window field is not a valid window selector or object");
         }
 
         lua_pop(L, 1);

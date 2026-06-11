@@ -205,6 +205,8 @@ void ShadeManager::ApplyWindowRuleShader(PHLWINDOW window)
 
     if (auto it = props.find(g.RuleShade); it != props.end())
         newShader = it->second->effect;
+    else if (auto it = props.find(g.RuleShadeCompat); it != props.end())
+        newShader = it->second->effect;
 
     auto it = m_Windows.find(window);
     if (it != m_Windows.end() && it->second.RuleShader)

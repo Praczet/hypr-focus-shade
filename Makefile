@@ -13,7 +13,7 @@ DEPS = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.d, $(SRCS))
 INCLUDES = $(shell pkg-config --cflags pixman-1 libdrm hyprland hyprlang)
 
 
-TARGET = $(OUT_DIR)/hypr-darkwindow.so
+TARGET = $(OUT_DIR)/hypr-focus-shade.so
 
 all: $(TARGET)
 

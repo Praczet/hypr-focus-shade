@@ -27,10 +27,10 @@ plugin: the active terminal stays readable, nearby sibling terminals step back.
 
 ## Status
 
-Planning / early fork stage.
+Working local prototype.
 
-The upstream `Hypr-DarkWindow` functionality is still the base. The first job is
-to preserve that behavior while adding a narrow focus-shade path on top of it.
+The upstream `Hypr-DarkWindow` functionality is still the base. This fork keeps
+that shader plumbing and adds focus-aware sibling shading on top.
 
 ## Why This Fork Exists
 
@@ -123,7 +123,7 @@ Suggested path:
 2. Add or identify a desaturation shader.
 3. Add a manual dispatcher/config path for applying that shader.
 4. Add focus/workspace/class automation.
-5. Rename/document the final surface once behavior is proven.
+5. Package the renamed surface and add debug/status tooling.
 
 Test in a nested Hyprland session before loading experimental builds into a
 main desktop session.
@@ -152,7 +152,7 @@ All of them get loaded with the plugin, if you want to only load specific ones y
 ```lua
 hl.config({
     plugin = {
-        darkwindow = {
+        focus_shade = {
             load_shaders = "invert, tint" -- defaults to "all"
             load_shaders = "" -- dont load any default shaders
         },
@@ -177,15 +177,15 @@ If you want to use your own Shaders, check [this](#custom-shaders) out.
 ```lua
 -- hyprland.lua
 
-if hl.plugin.darkwindow ~= nil then
+if hl.plugin.focus_shade ~= nil then
   -- To modify the uniforms of an already existing shader, create a new shader and set the uniforms you want
-  hl.plugin.darkwindow.load_shader("tintRed", {
+  hl.plugin.focus_shade.load_shader("tintRed", {
       from = "tint",
       args = "tintColor=[1 0 0] tintStrength=0.1",
   })
 
   -- Use a custom shader from a file
-  hl.plugin.darkwindow.load_shader("chromakeyv2", {
+  hl.plugin.focus_shade.load_shader("chromakeyv2", {
       --  see the section below (#custom-shaders) for the content of this file
       path = "~/path/to/shader.glsl",
       args = "wow=[1.0 0 0]",
@@ -196,17 +196,17 @@ if hl.plugin.darkwindow ~= nil then
   -- Then to apply the shader to a window you can use window rules
   hl.window_rule({
       match = { class = "pb250.exe" },
-      ["darkwindow:shade"] = "invert",
+      ["focus-shade:shade"] = "invert",
   })
 
   -- Uniforms can also be passed on the fly
   hl.window_rule({
       match = { fullscreen = true },
-      ["darkwindow:shade"] = "tint tintColor=[0 1 0]",
+      ["focus-shade:shade"] = "tint tintColor=[0 1 0]",
   })
 
   -- Or use a dispatcher
-  hl.bind(mainMod .. " + I", hl.plugin.darkwindow.dsp_shade({
+  hl.bind(mainMod .. " + I", hl.plugin.focus_shade.dsp_shade({
       shader = "invert",
 
       -- see https://wiki.hypr.land/Configuring/Basics/Dispatchers/#window
@@ -214,7 +214,7 @@ if hl.plugin.darkwindow ~= nil then
       window = "class:nemo",
   }))
 
-  hl.bind(mainMod .. " + O", hl.plugin.darkwindow.dsp_shade({
+  hl.bind(mainMod .. " + O", hl.plugin.focus_shade.dsp_shade({
       -- also works with on-the-fly uniforms
       shader = "chromakey bkg=[0.234 0.234 0.234] targetOpacity=0.5",
   }))
@@ -226,7 +226,7 @@ end
 ```ini
 # hyprland.conf
 
-plugin:darkwindow {
+plugin:focus_shade {
   # To modify the uniforms of an already existing shader, create a new shader and set the uniforms you want
   shader[tintRed] {
       from = tint
@@ -242,18 +242,18 @@ plugin:darkwindow {
 }
 
 # Then to apply the shader to a window you can use window rules
-windowrule = darkwindow:shade invert, match:class (pb170.exe)
+windowrule = focus-shade:shade invert, match:class (pb170.exe)
 # Uniforms can also be passed on the fly, but make sure to not use commas inside the arrays
-windowrule = darkwindow:shade tint tintColor=[0 1 0], match:fullscreen true
+windowrule = focus-shade:shade tint tintColor=[0 1 0], match:fullscreen true
 
 # Or use a dispatcher
-bind = $mainMod, T, darkwindow:shadeactive, tint tintColor=[0 0.5 1] tintStrength=0.3
-# There is also a `darkwindow:shade WINDOW_REGEX SHADER_NAME` available (see https://wiki.hypr.land/Configuring/Basics/Dispatchers/#window)
+bind = $mainMod, T, focus-shade:shadeactive, tint tintColor=[0 0.5 1] tintStrength=0.3
+# There is also a `focus-shade:shade WINDOW_REGEX SHADER_NAME` available (see https://wiki.hypr.land/Configuring/Basics/Dispatchers/#window)
 ```
 
 ### Custom Shaders
 
-To add custom shaders use the `plugin:darkwindow:shader` config category (see example above).
+To add custom shaders use the `plugin:focus_shade:shader` config category (see example above).
 The file at `.path` is a glsl file that should contain a `void windowShader(inout vec4 color)` function and
 uniform declarations for your `.args`.
 It can also contain more functions but be careful to not clash with names that are already used by hyprland.
@@ -285,8 +285,8 @@ This plugin will automatically detect the used variables and set them at each re
 ### hyprpm
 
 ```sh
-hyprpm add https://github.com/micha4w/Hypr-DarkWindow
-hyprpm enable Hypr-DarkWindow
+hyprpm add https://github.com/Praczet/hypr-focus-shade
+hyprpm enable hypr-focus-shade
 hyprpm reload
 ```
 
@@ -300,21 +300,21 @@ inputs = {
     home-manager = { ... };
     hyprland = { ... };
     ...
-    hypr-darkwindow = {
-      url = "github:micha4w/Hypr-DarkWindow/tags/v0.36.0"; # Make sure to change the tag to match your hyprland version
+    hypr-focus-shade = {
+      url = "github:Praczet/hypr-focus-shade"; # Make sure this follows your Hyprland version
       inputs.hyprland.follows = "hyprland";
     };
 };
 
 outputs = {
   home-manager,
-  hypr-darkwindow,
+  hypr-focus-shade,
   ...
 }: {
   ... = {
-    home-manager.users.micha4w = {
+    home-manager.users.praczet = {
       wayland.windowManager.hyprland.plugins = [
-        hypr-darkwindow.packages.${pkgs.system}.Hypr-DarkWindow
+        hypr-focus-shade.packages.${pkgs.system}.hypr-focus-shade
       ];
     };
   };

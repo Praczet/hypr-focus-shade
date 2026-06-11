@@ -76,6 +76,7 @@ struct State {
     SP<Config::Values::IValue> FocusShadeShader;
     SP<Config::Values::IValue> FocusShadeSameWorkspaceOnly;
     WindowRuleEffect RuleShade;
+    WindowRuleEffect RuleShadeCompat;
     std::vector<UserShader> UserShaders;
     std::vector<FocusShadeRule> FocusShadeRules;
 
@@ -90,7 +91,7 @@ struct State {
         if (COMPOSITOR_HASH != CLIENT_HASH)
         {
             NotifyError("Failed to load, mismatched versions! (see logs)");
-            throw Efmt("[Hypr-DarkWindow] version mismatch, built against {}, running compositor {}", CLIENT_HASH, COMPOSITOR_HASH);
+            throw Efmt("[hypr-focus-shade] version mismatch, built against {}, running compositor {}", CLIENT_HASH, COMPOSITOR_HASH);
         }
     }
 
@@ -128,8 +129,8 @@ struct State {
         }
     };
 
-    inline static const char* USER_SHADER_CATEGORY = "plugin:darkwindow:shader"; // TODO: not currently used with the Lua config, clean up at some point
-    inline static const char* LOAD_SHADERS_KEY = "plugin:darkwindow:load_shaders";
+    inline static const char* USER_SHADER_CATEGORY = "plugin:focus_shade:shader"; // TODO: not currently used with the Lua config, clean up at some point
+    inline static const char* LOAD_SHADERS_KEY = "plugin:focus_shade:load_shaders";
     inline static const char* FOCUS_SHADE_CLASSES_KEY = "plugin:focus_shade:classes";
     inline static const char* FOCUS_SHADE_SHADER_KEY = "plugin:focus_shade:shader";
     inline static const char* FOCUS_SHADE_SAME_WORKSPACE_ONLY_KEY = "plugin:focus_shade:same_workspace_only";
@@ -152,6 +153,10 @@ struct State {
             };
             registerLuaFn("load_shader", &LuaCallbacks::loadShader);
             registerLuaFn("dsp_shade", &LuaCallbacks::shade);
+            if (!HyprlandAPI::addLuaFunction(Handle, "focus_shade", "load_shader", &LuaCallbacks::loadShader))
+                throw Efmt("Failed to register Lua function hl.plugin.focus_shade.load_shader");
+            if (!HyprlandAPI::addLuaFunction(Handle, "focus_shade", "dsp_shade", &LuaCallbacks::shade))
+                throw Efmt("Failed to register Lua function hl.plugin.focus_shade.dsp_shade");
             if (!HyprlandAPI::addLuaFunction(Handle, "focus_shade", "rule", &LuaCallbacks::focusShadeRule))
                 throw Efmt("Failed to register Lua function hl.plugin.focus_shade.rule");
         }
@@ -172,7 +177,8 @@ struct State {
         if (!HyprlandAPI::addConfigValueV2(Handle, FocusShadeSameWorkspaceOnly))
             throw Efmt("Failed to add config value {}", FOCUS_SHADE_SAME_WORKSPACE_ONLY_KEY);
 
-        RuleShade = Desktop::Rule::windowEffects()->registerEffect("darkwindow:shade");
+        RuleShade = Desktop::Rule::windowEffects()->registerEffect("focus-shade:shade");
+        RuleShadeCompat = Desktop::Rule::windowEffects()->registerEffect("darkwindow:shade");
     }
 
     Hyprutils::String::CConstVarList Config_LoadedShaders()
@@ -293,6 +299,7 @@ struct State {
         }
 
         Desktop::Rule::windowEffects()->unregisterEffect(RuleShade);
+        Desktop::Rule::windowEffects()->unregisterEffect(RuleShadeCompat);
     }
 
 
@@ -304,7 +311,7 @@ struct State {
 
     void NotifyError(const std::string& err)
     {
-        std::string msg = std::string("[Hypr-DarkWindow] ") + err;
+        std::string msg = std::string("[hypr-focus-shade] ") + err;
         Log::logger->log(Log::ERR, msg);
         HyprlandAPI::addNotification(
             Handle,

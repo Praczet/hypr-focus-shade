@@ -4,7 +4,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
 {
     g.Init(handle);
 
-    Log::logger->log(Log::INFO, "[Hypr-DarkWindow] Loading Plugin");
+    Log::logger->log(Log::INFO, "[hypr-focus-shade] Loading Plugin");
 
     g.AddConfigValues();
     g.HookFunctions();
@@ -21,6 +21,8 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
 
     HyprlandAPI::addDispatcherV2(g.Handle, "darkwindow:shade", shadeSpecific);
     HyprlandAPI::addDispatcherV2(g.Handle, "darkwindow:shadeactive", shade);
+    HyprlandAPI::addDispatcherV2(g.Handle, "focus-shade:shade", shadeSpecific);
+    HyprlandAPI::addDispatcherV2(g.Handle, "focus-shade:shadeactive", shade);
 
     // Keep these keywords because backwards compatibility :)
     HyprlandAPI::addDispatcherV2(g.Handle, "shadeactivewindow", shade);
@@ -40,7 +42,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
         {
             try
             {
-                Log::logger->log(Log::INFO, "[Hypr-DarkWindow] Loading predefined shader with id: {}", name);
+                Log::logger->log(Log::INFO, "[hypr-focus-shade] Loading predefined shader with id: {}", name);
                 g.Manager.LoadPredefinedShader(std::string(name));
             }
             catch (const std::exception& ex)
@@ -53,7 +55,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
         {
             try
             {
-                Log::logger->log(Log::INFO, "[Hypr-DarkWindow] Loading custom shader with id: {}", shader.Id);
+                Log::logger->log(Log::INFO, "[hypr-focus-shade] Loading custom shader with id: {}", shader.Id);
 
                 std::string absPath = !shader.Path.empty() ? absolutePath(shader.Path, Config::mgr()->getMainConfigPath()) : shader.Path;
                 g.Manager.AddShader(ShaderDefinition{
@@ -70,7 +72,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
             }
         }
 
-        Log::logger->log(Log::INFO, "[Hypr-DarkWindow] Compiled all shaders");
+        Log::logger->log(Log::INFO, "[hypr-focus-shade] Compiled all shaders");
         try
         {
             g.Manager.RecheckWindowRules();
@@ -138,10 +140,10 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
     }));
 
     return {
-        "Hypr-DarkWindow",
-        "Allows you to modify the fragment shader of specific windows",
-        "micha4w",
-        "5.2.0"
+        "hypr-focus-shade",
+        "Focus-aware per-window shader effects for Hyprland",
+        "Praczet",
+        "0.1.0"
     };
 }
 

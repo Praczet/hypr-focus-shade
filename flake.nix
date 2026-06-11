@@ -25,11 +25,9 @@
         system: pkgs:
         let
           hyprlandPackage = hyprland.packages.${system}.hyprland;
-        in
-        rec {
-          Hypr-DarkWindow = pkgs.gcc14Stdenv.mkDerivation {
-            pname = "Hypr-DarkWindow";
-            version = "5.2.0";
+          hyprFocusShade = pkgs.gcc14Stdenv.mkDerivation {
+            pname = "hypr-focus-shade";
+            version = "0.1.0";
             src = nix-filter.lib {
               root = ./.;
               include = [
@@ -43,25 +41,27 @@
 
             installPhase = ''
               mkdir -p $out/lib
-              install ./out/hypr-darkwindow.so $out/lib/libHypr-DarkWindow.so
+              install ./out/hypr-focus-shade.so $out/lib/libhypr-focus-shade.so
             '';
 
             meta = with pkgs.lib; {
-              homepage = "https://github.com/micha4w/Hypr-DarkWindow";
-              description = "Apply custom shaders to any Window!";
+              homepage = "https://github.com/Praczet/hypr-focus-shade";
+              description = "Focus-aware per-window shader effects for Hyprland";
               license = licenses.mit;
               platforms = platforms.linux;
             };
           };
-
-          default = Hypr-DarkWindow;
+        in
+        {
+          "hypr-focus-shade" = hyprFocusShade;
+          default = hyprFocusShade;
         }
       );
 
       devShells = forHyprlandSystems (
         system: pkgs: {
           default = pkgs.mkShell {
-            name = "Hypr-DarkWindow";
+            name = "hypr-focus-shade";
             hardeningDisable = [ "fortify" ];
 
             nativeBuildInputs = with pkgs; [
@@ -70,7 +70,7 @@
               chromium
             ];
 
-            inputsFrom = [ self.packages.${system}.Hypr-DarkWindow ];
+            inputsFrom = [ self.packages.${system}."hypr-focus-shade" ];
           };
         }
       );
