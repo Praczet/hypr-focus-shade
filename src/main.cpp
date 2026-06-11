@@ -73,6 +73,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
         try
         {
             g.Manager.RecheckWindowRules();
+            g.RecomputeFocusShade();
         }
         catch (const std::exception& ex)
         {
@@ -91,8 +92,40 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle)
         }
     }));
 
+    const auto recomputeFocusShade = [&] {
+        try
+        {
+            g.RecomputeFocusShade();
+        }
+        catch (const std::exception& ex)
+        {
+            g.NotifyError(std::string("Failed to recompute focus shading: ") + ex.what());
+        }
+    };
+
+    g.Listeners.push_back(Event::bus()->m_events.window.active.listen([&](PHLWINDOW, Desktop::eFocusReason) {
+        recomputeFocusShade();
+    }));
+
+    g.Listeners.push_back(Event::bus()->m_events.window.open.listen([&](PHLWINDOW) {
+        recomputeFocusShade();
+    }));
+
+    g.Listeners.push_back(Event::bus()->m_events.window.class_.listen([&](PHLWINDOW) {
+        recomputeFocusShade();
+    }));
+
     g.Listeners.push_back(Event::bus()->m_events.window.destroy.listen([&](PHLWINDOW window) {
         g.Manager.ForgetWindow(window);
+        recomputeFocusShade();
+    }));
+
+    g.Listeners.push_back(Event::bus()->m_events.window.moveToWorkspace.listen([&](PHLWINDOW, PHLWORKSPACE) {
+        recomputeFocusShade();
+    }));
+
+    g.Listeners.push_back(Event::bus()->m_events.workspace.active.listen([&](PHLWORKSPACE) {
+        recomputeFocusShade();
     }));
 
     g.Listeners.push_back(Event::bus()->m_events.render.pre.listen([&](PHLMONITOR monitor) {

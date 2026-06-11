@@ -62,6 +62,20 @@ plugin {
 
 The exact syntax may change as the plugin API and existing code shape dictate.
 
+Current Lua config shape:
+
+```lua
+hl.config({
+    plugin = {
+        ["focus-shade"] = {
+            classes = "com.mitchellh.ghostty",
+            shader = "desaturate saturation=0.35",
+            same_workspace_only = true,
+        },
+    },
+})
+```
+
 The plugin should recompute shading when:
 
 - active window changes

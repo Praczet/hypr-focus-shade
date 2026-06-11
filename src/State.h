@@ -20,6 +20,7 @@
 #include <hyprland/src/config/shared/inotify/ConfigWatcher.hpp>
 #include <hyprland/src/config/lua/bindings/LuaBindingsInternal.hpp>
 #include <hyprland/src/config/values/types/StringValue.hpp>
+#include <hyprland/src/config/values/types/BoolValue.hpp>
 #include <hyprland/src/config/shared/actions/ConfigActions.hpp>
 
 #include <hyprland/src/plugins/PluginAPI.hpp>
@@ -65,6 +66,9 @@ struct State {
     HANDLE Handle = nullptr;
     ShadeManager Manager;
     SP<Config::Values::IValue> LoadShaders;
+    SP<Config::Values::IValue> FocusShadeClasses;
+    SP<Config::Values::IValue> FocusShadeShader;
+    SP<Config::Values::IValue> FocusShadeSameWorkspaceOnly;
     WindowRuleEffect RuleShade;
     std::vector<UserShader> UserShaders;
 
@@ -119,6 +123,9 @@ struct State {
 
     inline static const char* USER_SHADER_CATEGORY = "plugin:darkwindow:shader"; // TODO: not currently used with the Lua config, clean up at some point
     inline static const char* LOAD_SHADERS_KEY = "plugin:darkwindow:load_shaders";
+    inline static const char* FOCUS_SHADE_CLASSES_KEY = "plugin:focus-shade:classes";
+    inline static const char* FOCUS_SHADE_SHADER_KEY = "plugin:focus-shade:shader";
+    inline static const char* FOCUS_SHADE_SAME_WORKSPACE_ONLY_KEY = "plugin:focus-shade:same_workspace_only";
 
     void AddConfigValues()
     {
@@ -143,6 +150,18 @@ struct State {
         LoadShaders = SP(new Config::Values::CStringValue(LOAD_SHADERS_KEY, "comma separated list of shaders to load, can be empty or \"all\"", "all"));
         if (!HyprlandAPI::addConfigValueV2(Handle, LoadShaders))
             throw Efmt("Failed to add config value {}", LOAD_SHADERS_KEY);
+
+        FocusShadeClasses = SP(new Config::Values::CStringValue(FOCUS_SHADE_CLASSES_KEY, "comma separated list of classes eligible for focus shading", ""));
+        if (!HyprlandAPI::addConfigValueV2(Handle, FocusShadeClasses))
+            throw Efmt("Failed to add config value {}", FOCUS_SHADE_CLASSES_KEY);
+
+        FocusShadeShader = SP(new Config::Values::CStringValue(FOCUS_SHADE_SHADER_KEY, "shader applied to focus-shaded sibling windows", "desaturate"));
+        if (!HyprlandAPI::addConfigValueV2(Handle, FocusShadeShader))
+            throw Efmt("Failed to add config value {}", FOCUS_SHADE_SHADER_KEY);
+
+        FocusShadeSameWorkspaceOnly = SP(new Config::Values::CBoolValue(FOCUS_SHADE_SAME_WORKSPACE_ONLY_KEY, "only shade matching sibling windows on the active workspace", true));
+        if (!HyprlandAPI::addConfigValueV2(Handle, FocusShadeSameWorkspaceOnly))
+            throw Efmt("Failed to add config value {}", FOCUS_SHADE_SAME_WORKSPACE_ONLY_KEY);
 
         RuleShade = Desktop::Rule::windowEffects()->registerEffect("darkwindow:shade");
     }
@@ -185,6 +204,62 @@ struct State {
         }
         else
             return UserShaders;
+    }
+
+    Hyprutils::String::CConstVarList Config_FocusShadeClasses()
+    {
+        return Hyprutils::String::CConstVarList(
+            ((Config::Values::CStringValue*)FocusShadeClasses.get())->value()
+        );
+    }
+
+    std::string Config_FocusShadeShader()
+    {
+        return ((Config::Values::CStringValue*)FocusShadeShader.get())->value();
+    }
+
+    bool Config_FocusShadeSameWorkspaceOnly()
+    {
+        return ((Config::Values::CBoolValue*)FocusShadeSameWorkspaceOnly.get())->value();
+    }
+
+    bool ClassIsFocusShaded(const std::string& klass)
+    {
+        if (klass.empty())
+            return false;
+
+        for (auto& configuredClass : Config_FocusShadeClasses())
+        {
+            if (klass == configuredClass)
+                return true;
+        }
+
+        return false;
+    }
+
+    void RecomputeFocusShade()
+    {
+        auto active = Desktop::focusState()->window();
+        const bool activeEligible = active && active->m_isMapped && ClassIsFocusShaded(active->m_class);
+        const auto shader = Config_FocusShadeShader();
+        const bool sameWorkspaceOnly = Config_FocusShadeSameWorkspaceOnly();
+
+        for (const auto& window : g_pCompositor->m_windows)
+        {
+            if (!window || !window->m_isMapped)
+                continue;
+
+            const bool shouldShade =
+                activeEligible &&
+                window != active &&
+                window->m_class == active->m_class &&
+                (!sameWorkspaceOnly || window->m_workspace == active->m_workspace);
+
+            if (shouldShade)
+                Manager.ApplyFocusShader(window, shader);
+            else
+                Manager.ClearFocusShader(window);
+        }
     }
 
     void RemoveConfigValues() {
