@@ -27,7 +27,7 @@ plugin: the active terminal stays readable, nearby sibling terminals step back.
 
 ## Status
 
-Working local prototype.
+Working `0.1.0` prototype.
 
 The upstream `Hypr-DarkWindow` functionality is still the base. This fork keeps
 that shader plumbing and adds focus-aware sibling shading on top.
@@ -45,20 +45,71 @@ Hyprland already has several related tools, but each solves a different problem:
 
 This fork is for per-window, focus-aware shading.
 
-## Current Usage
+## Compatibility
 
-Build the plugin:
+Hyprland plugins are ABI-sensitive. Build this plugin against headers matching
+the running Hyprland commit. The plugin checks the build/runtime Hyprland hashes
+on load and refuses to start if they do not match.
+
+This project is currently versioned as `0.1.0`.
+
+## Installation
+
+### hyprpm
+
+```sh
+hyprpm add https://github.com/Praczet/hypr-focus-shade
+hyprpm enable hypr-focus-shade
+hyprpm reload
+```
+
+### Manual local build
 
 ```sh
 make all -j
-```
-
-Load the built plugin into the current Hyprland session:
-
-```sh
-hyprctl plugin load /path/to/hypr-focus-shade/out/hypr-focus-shade.so
+hyprctl plugin load "$PWD/out/hypr-focus-shade.so"
 hyprctl reload
 ```
+
+For local development, use:
+
+```sh
+scripts/dev-reload
+```
+
+### NixOS / Home Manager
+
+You should already have a fully working Home Manager setup before adding this
+plugin.
+
+```nix
+# flake.nix
+inputs = {
+    home-manager = { ... };
+    hyprland = { ... };
+
+    hypr-focus-shade = {
+      url = "github:Praczet/hypr-focus-shade";
+      inputs.hyprland.follows = "hyprland";
+    };
+};
+
+outputs = {
+  home-manager,
+  hypr-focus-shade,
+  ...
+}: {
+  ... = {
+    home-manager.users.praczet = {
+      wayland.windowManager.hyprland.plugins = [
+        hypr-focus-shade.packages.${pkgs.system}.hypr-focus-shade
+      ];
+    };
+  };
+}
+```
+
+## Current Usage
 
 Simple Lua config shape:
 
@@ -333,7 +384,7 @@ uniform declarations for your `.args`.
 It can also contain more functions but be careful to not clash with names that are already used by hyprland.
 
 The custom shader code will then be injected into the fragment shader used by hyprland.
-You can see examples of shaders by looking at the [predefined shaders](./src/PredefinedShaders.cpp).
+You can see examples of shaders by looking at the [predefined shaders](./src/PredefinedShaders.h).
 Feel free to make a pull request to add your own shaders!
 
 #### Special Variables
@@ -353,44 +404,3 @@ This plugin will automatically detect the used variables and set them at each re
 | **x_TextureOffset** | `fn (vec2 pixelOffset) -> vec4` | Gets the color at a pixel offset to the currently drawn pixel                                                                                        |
 | **x_Tex**           | `sampler2D`                     | The texture that gets sampled from                                                                                                                   |
 | **x_TexCoord**      | `vec2`                          | The coordinate that was used to get the current pixel color                                                                                          |
-
-## Installation
-
-### hyprpm
-
-```sh
-hyprpm add https://github.com/Praczet/hypr-focus-shade
-hyprpm enable hypr-focus-shade
-hyprpm reload
-```
-
-### NixOS (home-manager)
-
-You should already have a fully working home-manager setup before adding this plugin.
-
-```nix
-#flake.nix
-inputs = {
-    home-manager = { ... };
-    hyprland = { ... };
-    ...
-    hypr-focus-shade = {
-      url = "github:Praczet/hypr-focus-shade"; # Make sure this follows your Hyprland version
-      inputs.hyprland.follows = "hyprland";
-    };
-};
-
-outputs = {
-  home-manager,
-  hypr-focus-shade,
-  ...
-}: {
-  ... = {
-    home-manager.users.praczet = {
-      wayland.windowManager.hyprland.plugins = [
-        hypr-focus-shade.packages.${pkgs.system}.hypr-focus-shade
-      ];
-    };
-  };
-}
-```
